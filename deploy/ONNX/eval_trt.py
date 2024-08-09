@@ -20,7 +20,9 @@ def get_args_parser(add_help=True):
     parser.add_argument('--data', type=str, default='./data/coco.yaml', help='dataset yaml file path.')
     parser.add_argument('--weights', type=str, default='./yolov6s.engine', help='tensorrt engine file path.')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size')
-    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--height', type=int, default=384, help='inference size (pixels)')
+    parser.add_argument('--width', type=int, default=640, help='inference size (pixels)')
+    # parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--task', default='val', help='can only be val now.')
     parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--save_dir', type=str, default='runs/val/', help='evaluation save dir')
@@ -34,7 +36,8 @@ def get_args_parser(add_help=True):
 def run(data,
         weights=None,
         batch_size=32,
-        img_size=640,
+        height=384,
+        width=640,
         task='val',
         device='',
         save_dir='',
@@ -47,6 +50,7 @@ def run(data,
      # task
     assert task== 'val', f'task type can only be val, however you set it to {task}'
 
+    img_size=[height, width]
     save_dir = str(increment_name(osp.join(save_dir, name)))
     os.makedirs(save_dir, exist_ok=True)
 
@@ -56,6 +60,7 @@ def run(data,
     data = Evaler.reload_dataset(data) if isinstance(data, str) else data
 
     # init
+    print('gg:', img_size,height,width, flush=True)
     val = Evaler(data, batch_size, img_size, None, \
                 None, device, False, save_dir)
 

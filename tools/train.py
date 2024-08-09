@@ -139,5 +139,10 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = get_args_parser().parse_args()
+    import sys
+    import types
+    if len(sys.argv) == 2:
+        args = types.SimpleNamespace(**(yaml.safe_load(open(sys.argv[1],'r'))))
+    else:
+        args = get_args_parser().parse_args()
     main(args)

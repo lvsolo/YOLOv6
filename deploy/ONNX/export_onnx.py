@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
     parser.add_argument('--inplace', action='store_true', help='set Detect() inplace=True')
     parser.add_argument('--simplify', action='store_true', help='simplify onnx model')
-    parser.add_argument('--dynamic-batch', action='store_true', help='export dynamic batch onnx model')
+    parser.add_argument('--dynamic-batch', action='store_true', default=False, help='export dynamic batch onnx model')
     parser.add_argument('--end2end', action='store_true', help='export end2end onnx')
     parser.add_argument('--trt-version', type=int, default=8, help='tensorrt version')
     parser.add_argument('--ort', action='store_true', help='export onnx for onnxruntime')
@@ -99,40 +99,43 @@ if __name__ == '__main__':
     y = model(img)  # dry run
 
     # ONNX export
-    try:
-        LOGGER.info('\nStarting to export ONNX...')
-        export_file = args.weights.replace('.pt', '.onnx')  # filename
-        with BytesIO() as f:
-            torch.onnx.export(model, img, f, verbose=False, opset_version=13,
-                              training=torch.onnx.TrainingMode.EVAL,
-                              do_constant_folding=True,
-                              input_names=['images'],
-                              output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
-                              if args.end2end else ['outputs'],
-                              dynamic_axes=dynamic_axes)
-            f.seek(0)
-            # Checks
-            onnx_model = onnx.load(f)  # load onnx model
-            onnx.checker.check_model(onnx_model)  # check onnx model
-            # Fix output shape
-            if args.end2end and not args.ort:
-                shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
-                          args.batch_size, args.topk_all, args.batch_size, args.topk_all]
-                for i in onnx_model.graph.output:
-                    for j in i.type.tensor_type.shape.dim:
-                        j.dim_param = str(shapes.pop(0))
-        if args.simplify:
-            try:
-                import onnxsim
-                LOGGER.info('\nStarting to simplify ONNX...')
-                onnx_model, check = onnxsim.simplify(onnx_model)
-                assert check, 'assert check failed'
-            except Exception as e:
-                LOGGER.info(f'Simplifier failure: {e}')
-        onnx.save(onnx_model, export_file)
-        LOGGER.info(f'ONNX export success, saved as {export_file}')
-    except Exception as e:
-        LOGGER.info(f'ONNX export failure: {e}')
+    # try:
+    LOGGER.info('\nStarting to export ONNX...')
+    export_file = args.weights.replace('.pt', '.onnx')  # filename
+    print('gaga0', flush=True)
+    with BytesIO() as f:
+        print('gaga1', flush=True)
+        torch.onnx.export(model, img, f, verbose=False, opset_version=11,
+                          training=torch.onnx.TrainingMode.EVAL,
+                          do_constant_folding=True,
+                          input_names=['images'],
+                          output_names=['num_dets', 'det_boxes', 'det_scores', 'det_classes']
+                          if args.end2end else ['outputs'],
+                          dynamic_axes=dynamic_axes)
+        print('gaga2', flush=True)
+        f.seek(0)
+        # Checks
+        onnx_model = onnx.load(f)  # load onnx model
+        onnx.checker.check_model(onnx_model)  # check onnx model
+        # Fix output shape
+        if args.end2end and not args.ort:
+            shapes = [args.batch_size, 1, args.batch_size, args.topk_all, 4,
+                      args.batch_size, args.topk_all, args.batch_size, args.topk_all]
+            for i in onnx_model.graph.output:
+                for j in i.type.tensor_type.shape.dim:
+                    j.dim_param = str(shapes.pop(0))
+    if args.simplify:
+        try:
+            import onnxsim
+            LOGGER.info('\nStarting to simplify ONNX...')
+            onnx_model, check = onnxsim.simplify(onnx_model)
+            assert check, 'assert check failed'
+        except Exception as e:
+            LOGGER.info(f'Simplifier failure: {e}')
+    onnx.save(onnx_model, export_file)
+    LOGGER.info(f'ONNX export success, saved as {export_file}')
+    # except Exception as e:
+    #     LOGGER.info(f'ONNX export failure: {e}')
 
     # Finish
     LOGGER.info('\nExport complete (%.2fs)' % (time.time() - t))

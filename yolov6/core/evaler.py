@@ -59,6 +59,7 @@ class Evaler:
         self.specific_shape = specific_shape
         self.height = height
         self.width = width
+        print('gaga:', img_size, flush=True)
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -76,7 +77,10 @@ class Evaler:
             LOGGER.info("Switch model to deploy modality.")
             LOGGER.info("Model Summary: {}".format(get_model_info(model, self.img_size)))
         if self.device.type != 'cpu':
-            model(torch.zeros(1, 3, self.img_size, self.img_size).to(self.device).type_as(next(model.parameters())))
+            if isinstance(self.img_size, int):
+                model(torch.zeros(1, 3, self.img_size, self.img_size).to(self.device).type_as(next(model.parameters())))
+            elif isinstance(self.img_size, (list, tuple)):
+                model(torch.zeros(1, 3, self.img_size[0], self.img_size[1]).to(self.device).type_as(next(model.parameters())))
         model.half() if self.half else model.float()
         return model
 
@@ -448,12 +452,19 @@ class Evaler:
             trt.init_libnvinfer_plugins(logger, namespace="")
             with open(engine, 'rb') as f, trt.Runtime(logger) as runtime:
                 model = runtime.deserialize_cuda_engine(f.read())
+            # breakpoint()
             bindings = OrderedDict()
             for index in range(model.num_bindings):
                 name = model.get_binding_name(index)
                 dtype = trt.nptype(model.get_binding_dtype(index))
                 shape = tuple(model.get_binding_shape(index))
-                data = torch.from_numpy(np.empty(shape, dtype=np.dtype(dtype))).to(self.device)
+                print('11111111111', shape,flush=True)
+                if shape[0] < 0:
+                    new_shape = (1,*shape[1:])
+                    #new_shape = (1,shape[1],shape[2],shape[3])
+                    data = torch.from_numpy(np.empty(new_shape, dtype=np.dtype(dtype))).to(self.device)
+                else:   
+                    data = torch.from_numpy(np.empty(shape, dtype=np.dtype(dtype))).to(self.device)
                 bindings[name] = Binding(name, dtype, shape, data, int(data.data_ptr()))
             binding_addrs = OrderedDict((n, d.ptr) for n, d in bindings.items())
             context = model.create_execution_context()
@@ -505,7 +516,11 @@ class Evaler:
 
         context, bindings, binding_addrs, trt_batch_size = init_engine(engine)
         assert trt_batch_size >= self.batch_size, f'The batch size you set is {self.batch_size}, it must <= tensorrt binding batch size {trt_batch_size}.'
-        tmp = torch.randn(self.batch_size, 3, self.img_size, self.img_size).to(self.device)
+        print(self.batch_size, 3, self.img_size, flush=True)
+        if isinstance(self.img_size, (list, tuple)):
+            tmp = torch.randn(self.batch_size, 3, self.img_size[0], self.img_size[1]).to(self.device)
+        else:
+            tmp = torch.randn(self.batch_size, 3, self.img_size, self.img_size).to(self.device)
         # warm up for 10 times
         for _ in range(10):
             binding_addrs['images'] = int(tmp.data_ptr())

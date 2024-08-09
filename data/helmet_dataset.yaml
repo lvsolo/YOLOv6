@@ -1,0 +1,10 @@
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+train: /home/lvsolo/Downloads/hard-hat-detection/codes/yolov5/Dataset/images/train # train images
+val: /home/lvsolo/Downloads/hard-hat-detection/codes/yolov5/Dataset/images/val # val images
+test: /home/lvsolo/Downloads/hard-hat-detection/codes/yolov5/Dataset/images/test # test images (optional)
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+# Classes
+nc: 3  # number of classes
+names: ['helmet', 'head', 'person']

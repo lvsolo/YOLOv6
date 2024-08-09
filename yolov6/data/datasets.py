@@ -283,8 +283,10 @@ class TrainValDataset(Dataset):
             elif shrink_size:
                 ratio = (self.img_size - shrink_size) / max(h0, w0)
 
-            else:
+            elif isinstance(self.img_size,int): # self.img_size (height, width)
                 ratio = self.img_size / max(h0, w0)
+            elif isinstance(self.img_size,(tuple, list)):
+                ratio = min(self.img_size[0] / h0, self.img_size[1] / w0)
             if ratio != 1:
                     im = cv2.resize(
                         im,
